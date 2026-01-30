@@ -1,0 +1,274 @@
+[Prop.MlirInput]
+params.id = "Str"
+params.path = "Str"
+params.num_loops = "Int"
+info.title = "Input MLIR metadata used to ground scheduling choices."
+info.params.id = "Stable identifier for the MLIR file (usually the basename)."
+info.params.path = "Path to the MLIR file."
+info.params.num_loops = "Maximum loop depth across relevant Linalg ops."
+info.code = '''@dataclass
+class MlirInput:
+    "Input MLIR metadata used to ground scheduling choices."
+
+    id: str
+    "Stable identifier for the MLIR file (usually the basename)."
+
+    path: str
+    "Path to the MLIR file."
+
+    num_loops: int
+    "Maximum loop depth across relevant Linalg ops."'''
+
+[Prop.ParConfig]
+params.mlir = "Str"
+params.level = "Int"
+params.factor = "Int"
+info.title = "Allowed stream-parallelizer configuration for an MLIR input."
+info.params.mlir = "MLIR identifier this config applies to."
+info.params.level = "Stream level to parallelize."
+info.params.factor = "Parallelization factor."
+info.code = '''@dataclass
+class ParConfig:
+    "Allowed stream-parallelizer configuration for an MLIR input."
+
+    mlir: str
+    "MLIR identifier this config applies to."
+
+    level: int
+    "Stream level to parallelize."
+
+    factor: int
+    "Parallelization factor."'''
+
+[Prop.VecConfig]
+params.mlir = "Str"
+params.shape = "Int"
+params.block_sparse = "Bool"
+info.title = "Allowed stream-vectorizer configuration for an MLIR input."
+info.params.mlir = "MLIR identifier this config applies to."
+info.params.shape = "Vector length (stream_shape)."
+info.params.block_sparse = "Whether block-sparse vectorization is enabled."
+info.code = '''@dataclass
+class VecConfig:
+    "Allowed stream-vectorizer configuration for an MLIR input."
+
+    mlir: str
+    "MLIR identifier this config applies to."
+
+    shape: int
+    "Vector length (stream_shape)."
+
+    block_sparse: bool
+    "Whether block-sparse vectorization is enabled."'''
+
+[Type.Mlir]
+params.id = "Str"
+params.path = "Str"
+params.num_loops = "Int"
+info.title = "@intermediate:MLIR input"
+info.params.id = "Stable identifier for the MLIR file (usually the basename)."
+info.params.path = "Path to the MLIR file."
+info.params.num_loops = "Maximum loop depth across relevant Linalg ops."
+info.code = '''@dataclass
+class Mlir:
+    """@intermediate:MLIR input"""
+
+    @dataclass
+    class S:
+        id: str
+        "Stable identifier for the MLIR file (usually the basename)."
+
+        path: str
+        "Path to the MLIR file."
+
+        num_loops: int
+        "Maximum loop depth across relevant Linalg ops."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.Parallelization]
+params.mlir = "Str"
+params.stream_level = "Int"
+params.par_factor = "Int"
+info.title = "@intermediate:Parallelization schedule"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.params.stream_level = "Stream level to parallelize."
+info.params.par_factor = "Parallelization factor."
+info.code = '''@dataclass
+class Parallelization:
+    """@intermediate:Parallelization schedule"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+        stream_level: int
+        "Stream level to parallelize."
+
+        par_factor: int
+        "Parallelization factor."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.Vectorization]
+params.mlir = "Str"
+params.stream_shape = "Int"
+params.block_sparse = "Bool"
+info.title = "@intermediate:Vectorization schedule"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.params.stream_shape = "Vector length (stream_shape)."
+info.params.block_sparse = "Whether block-sparse vectorization is enabled."
+info.code = '''@dataclass
+class Vectorization:
+    """@intermediate:Vectorization schedule"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+        stream_shape: int
+        "Vector length (stream_shape)."
+
+        block_sparse: bool
+        "Whether block-sparse vectorization is enabled."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.Schedule]
+params.mlir = "Str"
+params.stream_level = "Int"
+params.par_factor = "Int"
+params.stream_shape = "Int"
+params.block_sparse = "Bool"
+info.title = "@intermediate:FuseFlow schedule"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.params.stream_level = "Stream level to parallelize."
+info.params.par_factor = "Parallelization factor."
+info.params.stream_shape = "Vector length (stream_shape)."
+info.params.block_sparse = "Whether block-sparse vectorization is enabled."
+info.code = '''@dataclass
+class Schedule:
+    """@intermediate:FuseFlow schedule"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+        stream_level: int
+        "Stream level to parallelize."
+
+        par_factor: int
+        "Parallelization factor."
+
+        stream_shape: int
+        "Vector length (stream_shape)."
+
+        block_sparse: bool
+        "Whether block-sparse vectorization is enabled."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.ScheduleChoice]
+params.mlir = "Str"
+info.title = "@intermediate:Schedule choice (mlir-scoped)"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.code = '''@dataclass
+class ScheduleChoice:
+    """@intermediate:Schedule choice (mlir-scoped)"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Function.load_mlir]
+params = {}
+ret = "Mlir"
+condition = [
+    "MlirInput { id = ret.id, path = ret.path, num_loops = ret.num_loops }",
+]
+info.description = """Load MLIR metadata"""
+info.code = '''def load_mlir(ret: Mlir.S) -> Mlir.D:
+    """Load MLIR metadata"""
+    return Mlir.D()'''
+
+[Function.choose_parallel]
+params.mlir = "Mlir"
+ret = "Parallelization"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level < mlir.num_loops",
+    "ParConfig { mlir = mlir.id, level = ret.stream_level, factor = ret.par_factor }",
+]
+info.description = """Choose a parallelization configuration"""
+info.code = '''def choose_parallel(mlir: Mlir, ret: Parallelization.S) -> Parallelization.D:
+    """Choose a parallelization configuration"""
+    return Parallelization.D()'''
+
+[Function.choose_vector]
+params.mlir = "Mlir"
+ret = "Vectorization"
+condition = [
+    "ret.mlir = mlir.id",
+    "VecConfig { mlir = mlir.id, shape = ret.stream_shape, block_sparse = ret.block_sparse }",
+]
+info.description = """Choose a vectorization configuration"""
+info.code = '''def choose_vector(mlir: Mlir, ret: Vectorization.S) -> Vectorization.D:
+    """Choose a vectorization configuration"""
+    return Vectorization.D()'''
+
+[Function.choose_schedule]
+params.mlir = "Mlir"
+ret = "Schedule"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level < mlir.num_loops",
+    "ParConfig { mlir = mlir.id, level = ret.stream_level, factor = ret.par_factor }",
+    "VecConfig { mlir = mlir.id, shape = ret.stream_shape, block_sparse = ret.block_sparse }",
+]
+info.description = """Choose a combined FuseFlow schedule"""
+info.code = '''def choose_schedule(mlir: Mlir, ret: Schedule.S) -> Schedule.D:
+    """Choose a combined FuseFlow schedule"""
+    return Schedule.D()'''
+
+[Function.finalize_schedule]
+params.sched = "Schedule"
+ret = "ScheduleChoice"
+condition = [
+    "ret.mlir = sched.mlir",
+]
+info.description = """Expose schedule choice without fixing stream parameters"""
+info.code = '''def finalize_schedule(sched: Schedule, ret: ScheduleChoice.S) -> ScheduleChoice.D:
+    """Expose schedule choice without fixing stream parameters"""
+    return ScheduleChoice.D()'''
+

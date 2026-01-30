@@ -1,0 +1,10 @@
+[[Prop]]
+name = "MlirInput"
+args.id = "nested_matmuls"
+args.path = "/Users/evanwilliams/pbn/honeybee/nested_matmuls.mlir"
+args.num_loops = 3
+
+[Goal]
+name = "ScheduleChoice"
+args.mlir = "nested_matmuls"
+

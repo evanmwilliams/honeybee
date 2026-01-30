@@ -1,0 +1,555 @@
+[Prop.MlirInput]
+params.id = "Str"
+params.path = "Str"
+params.num_loops = "Int"
+info.title = "Input MLIR metadata used to ground scheduling choices."
+info.params.id = "Stable identifier for the MLIR file (usually the basename)."
+info.params.path = "Path to the MLIR file."
+info.params.num_loops = "Maximum loop depth across relevant Linalg ops."
+info.code = '''@dataclass
+class MlirInput:
+    "Input MLIR metadata used to ground scheduling choices."
+
+    id: str
+    "Stable identifier for the MLIR file (usually the basename)."
+
+    path: str
+    "Path to the MLIR file."
+
+    num_loops: int
+    "Maximum loop depth across relevant Linalg ops."'''
+
+[Type.Mlir]
+params.id = "Str"
+params.path = "Str"
+params.num_loops = "Int"
+info.title = "@intermediate:MLIR input"
+info.params.id = "Stable identifier for the MLIR file (usually the basename)."
+info.params.path = "Path to the MLIR file."
+info.params.num_loops = "Maximum loop depth across relevant Linalg ops."
+info.code = '''@dataclass
+class Mlir:
+    """@intermediate:MLIR input"""
+
+    @dataclass
+    class S:
+        id: str
+        "Stable identifier for the MLIR file (usually the basename)."
+
+        path: str
+        "Path to the MLIR file."
+
+        num_loops: int
+        "Maximum loop depth across relevant Linalg ops."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.StreamLevel]
+params.mlir = "Str"
+params.stream_level = "Int"
+info.title = "@intermediate:Stream level choice (mlir-scoped)"
+info.params.mlir = "MLIR identifier this stream level applies to."
+info.params.stream_level = "Stream level to parallelize."
+info.code = '''@dataclass
+class StreamLevel:
+    """@intermediate:Stream level choice (mlir-scoped)"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this stream level applies to."
+
+        stream_level: int
+        "Stream level to parallelize."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.ParFactor]
+params.par_factor = "Int"
+info.title = "@intermediate:Parallelization factor choice"
+info.params.par_factor = "Parallelization factor."
+info.code = '''@dataclass
+class ParFactor:
+    """@intermediate:Parallelization factor choice"""
+
+    @dataclass
+    class S:
+        par_factor: int
+        "Parallelization factor."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.VectorShape]
+params.stream_shape = "Int"
+info.title = "@intermediate:Vector shape choice"
+info.params.stream_shape = "Vector length (stream_shape)."
+info.code = '''@dataclass
+class VectorShape:
+    """@intermediate:Vector shape choice"""
+
+    @dataclass
+    class S:
+        stream_shape: int
+        "Vector length (stream_shape)."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.BlockSparse]
+params.block_sparse = "Bool"
+info.title = "@intermediate:Block-sparse vectorization choice"
+info.params.block_sparse = "Whether block-sparse vectorization is enabled."
+info.code = '''@dataclass
+class BlockSparse:
+    """@intermediate:Block-sparse vectorization choice"""
+
+    @dataclass
+    class S:
+        block_sparse: bool
+        "Whether block-sparse vectorization is enabled."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.Parallelization]
+params.mlir = "Str"
+params.stream_level = "Int"
+params.par_factor = "Int"
+info.title = "@intermediate:Parallelization schedule"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.params.stream_level = "Stream level to parallelize."
+info.params.par_factor = "Parallelization factor."
+info.code = '''@dataclass
+class Parallelization:
+    """@intermediate:Parallelization schedule"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+        stream_level: int
+        "Stream level to parallelize."
+
+        par_factor: int
+        "Parallelization factor."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.Vectorization]
+params.mlir = "Str"
+params.stream_shape = "Int"
+params.block_sparse = "Bool"
+info.title = "@intermediate:Vectorization schedule"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.params.stream_shape = "Vector length (stream_shape)."
+info.params.block_sparse = "Whether block-sparse vectorization is enabled."
+info.code = '''@dataclass
+class Vectorization:
+    """@intermediate:Vectorization schedule"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+        stream_shape: int
+        "Vector length (stream_shape)."
+
+        block_sparse: bool
+        "Whether block-sparse vectorization is enabled."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.Schedule]
+params.mlir = "Str"
+params.stream_level = "Int"
+params.par_factor = "Int"
+params.stream_shape = "Int"
+params.block_sparse = "Bool"
+info.title = "@intermediate:FuseFlow schedule"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.params.stream_level = "Stream level to parallelize."
+info.params.par_factor = "Parallelization factor."
+info.params.stream_shape = "Vector length (stream_shape)."
+info.params.block_sparse = "Whether block-sparse vectorization is enabled."
+info.code = '''@dataclass
+class Schedule:
+    """@intermediate:FuseFlow schedule"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+        stream_level: int
+        "Stream level to parallelize."
+
+        par_factor: int
+        "Parallelization factor."
+
+        stream_shape: int
+        "Vector length (stream_shape)."
+
+        block_sparse: bool
+        "Whether block-sparse vectorization is enabled."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Type.ScheduleChoice]
+params.mlir = "Str"
+info.title = "@intermediate:Schedule choice (mlir-scoped)"
+info.params.mlir = "MLIR identifier this schedule applies to."
+info.code = '''@dataclass
+class ScheduleChoice:
+    """@intermediate:Schedule choice (mlir-scoped)"""
+
+    @dataclass
+    class S:
+        mlir: str
+        "MLIR identifier this schedule applies to."
+
+    @dataclass
+    class D:
+        pass
+
+    static: S
+    dynamic: D'''
+
+[Function.load_mlir]
+params = {}
+ret = "Mlir"
+condition = [
+    "MlirInput { id = ret.id, path = ret.path, num_loops = ret.num_loops }",
+]
+info.description = """Load MLIR metadata"""
+info.code = '''def load_mlir(ret: Mlir.S) -> Mlir.D:
+    """Load MLIR metadata"""
+    return Mlir.D()'''
+
+[Function.choose_stream_level_0]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 0",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 0"""
+info.code = '''def choose_stream_level_0(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 0"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_1]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 1",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 1"""
+info.code = '''def choose_stream_level_1(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 1"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_2]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 2",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 2"""
+info.code = '''def choose_stream_level_2(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 2"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_3]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 3",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 3"""
+info.code = '''def choose_stream_level_3(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 3"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_4]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 4",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 4"""
+info.code = '''def choose_stream_level_4(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 4"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_5]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 5",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 5"""
+info.code = '''def choose_stream_level_5(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 5"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_6]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 6",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 6"""
+info.code = '''def choose_stream_level_6(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 6"""
+    return StreamLevel.D()'''
+
+[Function.choose_stream_level_7]
+params.mlir = "Mlir"
+ret = "StreamLevel"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_level = 7",
+    "ret.stream_level < mlir.num_loops",
+]
+info.description = """Choose stream level 7"""
+info.code = '''def choose_stream_level_7(mlir: Mlir, ret: StreamLevel.S) -> StreamLevel.D:
+    """Choose stream level 7"""
+    return StreamLevel.D()'''
+
+[Function.choose_par_factor_1]
+params = {}
+ret = "ParFactor"
+condition = [
+    "ret.par_factor = 1",
+]
+info.description = """Choose parallelization factor 1"""
+info.code = '''def choose_par_factor_1(ret: ParFactor.S) -> ParFactor.D:
+    """Choose parallelization factor 1"""
+    return ParFactor.D()'''
+
+[Function.choose_par_factor_2]
+params = {}
+ret = "ParFactor"
+condition = [
+    "ret.par_factor = 2",
+]
+info.description = """Choose parallelization factor 2"""
+info.code = '''def choose_par_factor_2(ret: ParFactor.S) -> ParFactor.D:
+    """Choose parallelization factor 2"""
+    return ParFactor.D()'''
+
+[Function.choose_par_factor_4]
+params = {}
+ret = "ParFactor"
+condition = [
+    "ret.par_factor = 4",
+]
+info.description = """Choose parallelization factor 4"""
+info.code = '''def choose_par_factor_4(ret: ParFactor.S) -> ParFactor.D:
+    """Choose parallelization factor 4"""
+    return ParFactor.D()'''
+
+[Function.choose_par_factor_8]
+params = {}
+ret = "ParFactor"
+condition = [
+    "ret.par_factor = 8",
+]
+info.description = """Choose parallelization factor 8"""
+info.code = '''def choose_par_factor_8(ret: ParFactor.S) -> ParFactor.D:
+    """Choose parallelization factor 8"""
+    return ParFactor.D()'''
+
+[Function.choose_vector_shape_1]
+params = {}
+ret = "VectorShape"
+condition = [
+    "ret.stream_shape = 1",
+]
+info.description = """Choose vector shape 1"""
+info.code = '''def choose_vector_shape_1(ret: VectorShape.S) -> VectorShape.D:
+    """Choose vector shape 1"""
+    return VectorShape.D()'''
+
+[Function.choose_vector_shape_2]
+params = {}
+ret = "VectorShape"
+condition = [
+    "ret.stream_shape = 2",
+]
+info.description = """Choose vector shape 2"""
+info.code = '''def choose_vector_shape_2(ret: VectorShape.S) -> VectorShape.D:
+    """Choose vector shape 2"""
+    return VectorShape.D()'''
+
+[Function.choose_vector_shape_4]
+params = {}
+ret = "VectorShape"
+condition = [
+    "ret.stream_shape = 4",
+]
+info.description = """Choose vector shape 4"""
+info.code = '''def choose_vector_shape_4(ret: VectorShape.S) -> VectorShape.D:
+    """Choose vector shape 4"""
+    return VectorShape.D()'''
+
+[Function.choose_vector_shape_8]
+params = {}
+ret = "VectorShape"
+condition = [
+    "ret.stream_shape = 8",
+]
+info.description = """Choose vector shape 8"""
+info.code = '''def choose_vector_shape_8(ret: VectorShape.S) -> VectorShape.D:
+    """Choose vector shape 8"""
+    return VectorShape.D()'''
+
+[Function.choose_vector_shape_16]
+params = {}
+ret = "VectorShape"
+condition = [
+    "ret.stream_shape = 16",
+]
+info.description = """Choose vector shape 16"""
+info.code = '''def choose_vector_shape_16(ret: VectorShape.S) -> VectorShape.D:
+    """Choose vector shape 16"""
+    return VectorShape.D()'''
+
+[Function.choose_block_sparse_false]
+params = {}
+ret = "BlockSparse"
+condition = [
+    "ret.block_sparse = false",
+]
+info.description = """Disable block-sparse vectorization"""
+info.code = '''def choose_block_sparse_false(ret: BlockSparse.S) -> BlockSparse.D:
+    """Disable block-sparse vectorization"""
+    return BlockSparse.D()'''
+
+[Function.choose_block_sparse_true]
+params = {}
+ret = "BlockSparse"
+condition = [
+    "ret.block_sparse = true",
+]
+info.description = """Enable block-sparse vectorization"""
+info.code = '''def choose_block_sparse_true(ret: BlockSparse.S) -> BlockSparse.D:
+    """Enable block-sparse vectorization"""
+    return BlockSparse.D()'''
+
+[Function.build_parallelization]
+params.level = "StreamLevel"
+params.factor = "ParFactor"
+ret = "Parallelization"
+condition = [
+    "ret.mlir = level.mlir",
+    "ret.stream_level = level.stream_level",
+    "ret.par_factor = factor.par_factor",
+]
+info.description = """Combine stream level and parallelization factor"""
+info.code = '''def build_parallelization(
+    level: StreamLevel, factor: ParFactor, ret: Parallelization.S
+) -> Parallelization.D:
+    """Combine stream level and parallelization factor"""
+    return Parallelization.D()'''
+
+[Function.build_vectorization]
+params.mlir = "Mlir"
+params.shape = "VectorShape"
+params.block = "BlockSparse"
+ret = "Vectorization"
+condition = [
+    "ret.mlir = mlir.id",
+    "ret.stream_shape = shape.stream_shape",
+    "ret.block_sparse = block.block_sparse",
+]
+info.description = """Combine vector shape and block-sparse choice"""
+info.code = '''def build_vectorization(
+    mlir: Mlir, shape: VectorShape, block: BlockSparse, ret: Vectorization.S
+) -> Vectorization.D:
+    """Combine vector shape and block-sparse choice"""
+    return Vectorization.D()'''
+
+[Function.build_schedule]
+params.vec = "Vectorization"
+params.par = "Parallelization"
+ret = "Schedule"
+condition = [
+    "ret.mlir = vec.mlir",
+    "ret.mlir = par.mlir",
+    "ret.stream_shape = vec.stream_shape",
+    "ret.block_sparse = vec.block_sparse",
+    "ret.stream_level = par.stream_level",
+    "ret.par_factor = par.par_factor",
+]
+info.description = """Combine vectorization and parallelization into a schedule"""
+info.code = '''def build_schedule(
+    vec: Vectorization, par: Parallelization, ret: Schedule.S
+) -> Schedule.D:
+    """Combine vectorization and parallelization into a schedule"""
+    return Schedule.D()'''
+
+[Function.finalize_schedule]
+params.sched = "Schedule"
+ret = "ScheduleChoice"
+condition = [
+    "ret.mlir = sched.mlir",
+]
+info.description = """Expose schedule choice without fixing stream parameters"""
+info.code = '''def finalize_schedule(sched: Schedule, ret: ScheduleChoice.S) -> ScheduleChoice.D:
+    """Expose schedule choice without fixing stream parameters"""
+    return ScheduleChoice.D()'''
+

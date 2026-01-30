@@ -1,0 +1,88 @@
+[[Prop]]
+name = "MlirInput"
+args.id = "nested_matmuls"
+args.path = "/Users/evanwilliams/pbn/honeybee/nested_matmuls.mlir"
+args.num_loops = 3
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 0
+args.factor = 1
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 0
+args.factor = 2
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 0
+args.factor = 4
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 0
+args.factor = 8
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 2
+args.factor = 1
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 2
+args.factor = 2
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 2
+args.factor = 4
+
+[[Prop]]
+name = "ParConfig"
+args.mlir = "nested_matmuls"
+args.level = 2
+args.factor = 8
+
+[[Prop]]
+name = "VecConfig"
+args.mlir = "nested_matmuls"
+args.shape = 1
+args.block_sparse = false
+
+[[Prop]]
+name = "VecConfig"
+args.mlir = "nested_matmuls"
+args.shape = 2
+args.block_sparse = false
+
+[[Prop]]
+name = "VecConfig"
+args.mlir = "nested_matmuls"
+args.shape = 4
+args.block_sparse = false
+
+[[Prop]]
+name = "VecConfig"
+args.mlir = "nested_matmuls"
+args.shape = 8
+args.block_sparse = false
+
+[[Prop]]
+name = "VecConfig"
+args.mlir = "nested_matmuls"
+args.shape = 16
+args.block_sparse = false
+
+[Goal]
+name = "ScheduleChoice"
+args.mlir = "nested_matmuls"
+
