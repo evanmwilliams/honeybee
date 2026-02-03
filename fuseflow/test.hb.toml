@@ -1,0 +1,10 @@
+[[Preamble]]
+content = '''from dataclasses import dataclass'''
+
+[[Prop]]
+name = "P_MlirProgram"
+args.path = "nested_matmuls.mlir"
+
+[Goal]
+name = "FuseFlowSchedule"
+args = {}
