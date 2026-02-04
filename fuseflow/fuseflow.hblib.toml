@@ -1,6 +1,7 @@
 [[Preamble]]
 content = '''from dataclasses import dataclass
 import datetime
+import json
 import os
 import polars as pl'''
 
@@ -29,6 +30,58 @@ content='''def carry_over(src_object, dst_object, *, file=None):
             carry_one(file)
     else:
         carry_one(file)'''
+
+[[Preamble]]
+content='''def write_schedule_json(schedule_dict, output_dir, *, filename="schedule.json"):
+    os.makedirs(output_dir, exist_ok=True)
+    out_path = os.path.join(output_dir, filename)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(schedule_dict, f, indent=2, sort_keys=True)
+    return out_path'''
+
+[[Preamble]]
+content='''class ScheduleState:
+    stream_level = None
+    par_factor = None
+    stream_shape = None
+    block_sparse = None
+
+    @classmethod
+    def set_values(cls, *, stream_level=None, par_factor=None, stream_shape=None, block_sparse=None):
+        if stream_level is not None:
+            cls.stream_level = stream_level
+        if par_factor is not None:
+            cls.par_factor = par_factor
+        if stream_shape is not None:
+            cls.stream_shape = stream_shape
+        if block_sparse is not None:
+            cls.block_sparse = block_sparse
+
+    @classmethod
+    def as_dict(cls):
+        return {
+            "stream-parallelizer": {
+                "stream-level": cls.stream_level,
+                "par-factor": cls.par_factor,
+            },
+            "stream-vectorizer": {
+                "stream-shape": cls.stream_shape,
+                "enable-block-sparse": cls.block_sparse,
+            },
+        }
+
+    @classmethod
+    def missing_fields(cls):
+        missing = []
+        if cls.stream_level is None:
+            missing.append("stream_level")
+        if cls.par_factor is None:
+            missing.append("par_factor")
+        if cls.stream_shape is None:
+            missing.append("stream_shape")
+        if cls.block_sparse is None:
+            missing.append("block_sparse")
+        return missing'''
 
 [Type.MlirProgram]
 params.path = "Str"
@@ -69,66 +122,6 @@ class VectorizationPass:
     The goal of this step is to produce the schedule for the parallelization 
     pass in the FuseFlow compiler"""
     path: str'''
-
-[Type.VecStreamLevelChoice]
-params.stream_level = "Int"
-info.title = "VecStreamLevelChoice"
-info.description = """The goal of this step is to choose a stream level for parallelization
-when also selecting vectorization parameters."""
-info.code = '''@dataclass
-class VecStreamLevelChoice:
-    """VecStreamLevelChoice
-
-    The goal of this step is to choose a stream level for parallelization
-    when also selecting vectorization parameters."""
-    path: str
-
-    stream_level: int'''
-
-[Type.VecParFactorChoice]
-params.par_factor = "Int"
-info.title = "VecParFactorChoice"
-info.description = """The goal of this step is to choose a parallelization factor when also
-selecting vectorization parameters."""
-info.code = '''@dataclass
-class VecParFactorChoice:
-    """VecParFactorChoice
-
-    The goal of this step is to choose a parallelization factor when also
-    selecting vectorization parameters."""
-    path: str
-
-    par_factor: int'''
-
-[Type.VecStreamShapeChoice]
-params.stream_shape = "Int"
-info.title = "VecStreamShapeChoice"
-info.description = """The goal of this step is to choose a stream shape when also selecting
-vectorization parameters."""
-info.code = '''@dataclass
-class VecStreamShapeChoice:
-    """VecStreamShapeChoice
-
-    The goal of this step is to choose a stream shape when also selecting
-    vectorization parameters."""
-    path: str
-
-    stream_shape: int'''
-
-[Type.VecBlockSparseChoice]
-params.block_sparse = "Bool"
-info.title = "VecBlockSparseChoice"
-info.description = """The goal of this step is to choose whether block-sparse vectorization is
-enabled when also selecting vectorization parameters."""
-info.code = '''@dataclass
-class VecBlockSparseChoice:
-    """VecBlockSparseChoice
-
-    The goal of this step is to choose whether block-sparse vectorization is
-    enabled when also selecting vectorization parameters."""
-    path: str
-
-    block_sparse: bool'''
 
 [Type.StreamShapeChoice]
 params.stream_shape = "Int"
@@ -217,7 +210,15 @@ info.title = "schedule "
 info.description = """The function that produces a schedule."""
 info.hyperparameters = [
 ]
-info.code = '''print("This is a default schedule.")'''
+info.code = '''ScheduleState.set_values(
+    stream_level=0,
+    par_factor=1,
+    stream_shape=16,
+    block_sparse=False,
+)
+schedule = ScheduleState.as_dict()
+write_schedule_json(schedule, __hb_ret.path)
+print(json.dumps(schedule, indent=2, sort_keys=True))'''
 
 [Function.build_schedule]
 params.pass = "ParallelizationPass"
@@ -226,493 +227,239 @@ condition = [
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_pass: ParallelizationPass,
-__hb_ret: FuseFlowSchedule,
-
-print("Build the schedule")'''
+info.code = '''missing = ScheduleState.missing_fields()
+if missing:
+    raise RuntimeError(
+        "schedule state incomplete; missing: " + ", ".join(missing)
+    )
+schedule = ScheduleState.as_dict()
+write_schedule_json(schedule, __hb_ret.path)
+print(json.dumps(schedule, indent=2, sort_keys=True))'''
 
 [Function.choose_default_stream_level]
-params.par = "ParFactorChoice"
+params.vec = "VectorizationPass"
 ret = "StreamLevelChoice"
 condition = [
     "ret.stream_level = 0",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_par: ParFactorChoice,
-__hb_ret: StreamLevelChoice,
-
+info.code = '''ScheduleState.set_values(stream_level=0)
 print("Choose default stream level (0).")'''
 
 [Function.choose_stream_level_1]
-params.par = "ParFactorChoice"
+params.vec = "VectorizationPass"
 ret = "StreamLevelChoice"
 condition = [
     "ret.stream_level = 1",
 ]
 info.hyperparameters = [
 ]
-info.code = '''print("Choose stream level 1.")'''
-
-[Function.choose_stream_level_2]
-params.par = "ParFactorChoice"
-ret = "StreamLevelChoice"
-condition = [
-    "ret.stream_level = 2",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose stream level 2.")'''
-
-[Function.choose_stream_level_4]
-params.par = "ParFactorChoice"
-ret = "StreamLevelChoice"
-condition = [
-    "ret.stream_level = 4",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose stream level 4.")'''
-
-[Function.choose_stream_level_8]
-params.par = "ParFactorChoice"
-ret = "StreamLevelChoice"
-condition = [
-    "ret.stream_level = 8",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose stream level 8.")'''
-
-[Function.choose_stream_level_16]
-params.par = "ParFactorChoice"
-ret = "StreamLevelChoice"
-condition = [
-    "ret.stream_level = 16",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose stream level 16.")'''
-
-[Function.choose_default_par_factor]
-params = {}
-ret = "ParFactorChoice"
-condition = [
-    "ret.par_factor = 1",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose default par factor (1).")'''
-
-[Function.choose_par_factor_2]
-params = {}
-ret = "ParFactorChoice"
-condition = [
-    "ret.par_factor = 2",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose par factor 2.")'''
-
-[Function.choose_par_factor_4]
-params = {}
-ret = "ParFactorChoice"
-condition = [
-    "ret.par_factor = 4",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose par factor 4.")'''
-
-[Function.choose_par_factor_8]
-params = {}
-ret = "ParFactorChoice"
-condition = [
-    "ret.par_factor = 8",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose par factor 8.")'''
-
-[Function.choose_par_factor_16]
-params = {}
-ret = "ParFactorChoice"
-condition = [
-    "ret.par_factor = 16",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose par factor 16.")'''
-
-[Function.choose_default_par_stream_level]
-params.par = "VecParFactorChoice"
-ret = "VecStreamLevelChoice"
-condition = [
-    "ret.stream_level = 0",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_par: VecParFactorChoice,
-__hb_ret: VecStreamLevelChoice,
-
-print("Choose default stream level (0).")'''
-
-[Function.choose_par_stream_level_1]
-params.par = "VecParFactorChoice"
-ret = "VecStreamLevelChoice"
-condition = [
-    "ret.stream_level = 1",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_par: VecParFactorChoice,
-__hb_ret: VecStreamLevelChoice,
-
+info.code = '''ScheduleState.set_values(stream_level=1)
 print("Choose stream level 1.")'''
 
-[Function.choose_par_stream_level_2]
-params.par = "VecParFactorChoice"
-ret = "VecStreamLevelChoice"
+[Function.choose_stream_level_2]
+params.vec = "VectorizationPass"
+ret = "StreamLevelChoice"
 condition = [
     "ret.stream_level = 2",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_par: VecParFactorChoice,
-__hb_ret: VecStreamLevelChoice,
-
+info.code = '''ScheduleState.set_values(stream_level=2)
 print("Choose stream level 2.")'''
 
-[Function.choose_par_stream_level_4]
-params.par = "VecParFactorChoice"
-ret = "VecStreamLevelChoice"
+[Function.choose_stream_level_4]
+params.vec = "VectorizationPass"
+ret = "StreamLevelChoice"
 condition = [
     "ret.stream_level = 4",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_par: VecParFactorChoice,
-__hb_ret: VecStreamLevelChoice,
-
+info.code = '''ScheduleState.set_values(stream_level=4)
 print("Choose stream level 4.")'''
 
-[Function.choose_par_stream_level_8]
-params.par = "VecParFactorChoice"
-ret = "VecStreamLevelChoice"
+[Function.choose_stream_level_8]
+params.vec = "VectorizationPass"
+ret = "StreamLevelChoice"
 condition = [
     "ret.stream_level = 8",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_par: VecParFactorChoice,
-__hb_ret: VecStreamLevelChoice,
-
+info.code = '''ScheduleState.set_values(stream_level=8)
 print("Choose stream level 8.")'''
 
-[Function.choose_par_stream_level_16]
-params.par = "VecParFactorChoice"
-ret = "VecStreamLevelChoice"
+[Function.choose_stream_level_16]
+params.vec = "VectorizationPass"
+ret = "StreamLevelChoice"
 condition = [
     "ret.stream_level = 16",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_par: VecParFactorChoice,
-__hb_ret: VecStreamLevelChoice,
-
+info.code = '''ScheduleState.set_values(stream_level=16)
 print("Choose stream level 16.")'''
 
-[Function.choose_default_par_factor_for_vec]
-params.shape = "VecStreamShapeChoice"
-ret = "VecParFactorChoice"
+[Function.choose_default_par_factor]
+params.level = "StreamLevelChoice"
+ret = "ParFactorChoice"
 condition = [
     "ret.par_factor = 1",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_shape: VecStreamShapeChoice,
-__hb_ret: VecParFactorChoice,
-
+info.code = '''ScheduleState.set_values(par_factor=1)
 print("Choose default par factor (1).")'''
 
-[Function.choose_par_factor_for_vec_2]
-params.shape = "VecStreamShapeChoice"
-ret = "VecParFactorChoice"
+[Function.choose_par_factor_2]
+params.level = "StreamLevelChoice"
+ret = "ParFactorChoice"
 condition = [
     "ret.par_factor = 2",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_shape: VecStreamShapeChoice,
-__hb_ret: VecParFactorChoice,
-
+info.code = '''ScheduleState.set_values(par_factor=2)
 print("Choose par factor 2.")'''
 
-[Function.choose_par_factor_for_vec_4]
-params.shape = "VecStreamShapeChoice"
-ret = "VecParFactorChoice"
+[Function.choose_par_factor_4]
+params.level = "StreamLevelChoice"
+ret = "ParFactorChoice"
 condition = [
     "ret.par_factor = 4",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_shape: VecStreamShapeChoice,
-__hb_ret: VecParFactorChoice,
-
+info.code = '''ScheduleState.set_values(par_factor=4)
 print("Choose par factor 4.")'''
 
-[Function.choose_par_factor_for_vec_8]
-params.shape = "VecStreamShapeChoice"
-ret = "VecParFactorChoice"
+[Function.choose_par_factor_8]
+params.level = "StreamLevelChoice"
+ret = "ParFactorChoice"
 condition = [
     "ret.par_factor = 8",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_shape: VecStreamShapeChoice,
-__hb_ret: VecParFactorChoice,
-
+info.code = '''ScheduleState.set_values(par_factor=8)
 print("Choose par factor 8.")'''
 
-[Function.choose_par_factor_for_vec_16]
-params.shape = "VecStreamShapeChoice"
-ret = "VecParFactorChoice"
+[Function.choose_par_factor_16]
+params.level = "StreamLevelChoice"
+ret = "ParFactorChoice"
 condition = [
     "ret.par_factor = 16",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_shape: VecStreamShapeChoice,
-__hb_ret: VecParFactorChoice,
-
+info.code = '''ScheduleState.set_values(par_factor=16)
 print("Choose par factor 16.")'''
 
-[Function.choose_default_vec_stream_shape]
-params.block = "VecBlockSparseChoice"
-ret = "VecStreamShapeChoice"
-condition = [
-    "ret.stream_shape = 16",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_block: VecBlockSparseChoice,
-__hb_ret: VecStreamShapeChoice,
-
-print("Choose default stream shape (16).")'''
-
-[Function.choose_vec_stream_shape_1]
-params.block = "VecBlockSparseChoice"
-ret = "VecStreamShapeChoice"
-condition = [
-    "ret.stream_shape = 1",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_block: VecBlockSparseChoice,
-__hb_ret: VecStreamShapeChoice,
-
-print("Choose stream shape 1.")'''
-
-[Function.choose_vec_stream_shape_2]
-params.block = "VecBlockSparseChoice"
-ret = "VecStreamShapeChoice"
-condition = [
-    "ret.stream_shape = 2",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_block: VecBlockSparseChoice,
-__hb_ret: VecStreamShapeChoice,
-
-print("Choose stream shape 2.")'''
-
-[Function.choose_vec_stream_shape_4]
-params.block = "VecBlockSparseChoice"
-ret = "VecStreamShapeChoice"
-condition = [
-    "ret.stream_shape = 4",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_block: VecBlockSparseChoice,
-__hb_ret: VecStreamShapeChoice,
-
-print("Choose stream shape 4.")'''
-
-[Function.choose_vec_stream_shape_8]
-params.block = "VecBlockSparseChoice"
-ret = "VecStreamShapeChoice"
-condition = [
-    "ret.stream_shape = 8",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_block: VecBlockSparseChoice,
-__hb_ret: VecStreamShapeChoice,
-
-print("Choose stream shape 8.")'''
-
-[Function.choose_vec_stream_shape_16]
-params.block = "VecBlockSparseChoice"
-ret = "VecStreamShapeChoice"
-condition = [
-    "ret.stream_shape = 16",
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_block: VecBlockSparseChoice,
-__hb_ret: VecStreamShapeChoice,
-
-print("Choose stream shape 16.")'''
-
-[Function.choose_default_vec_block_sparse]
-params = {}
-ret = "VecBlockSparseChoice"
-condition = [
-    "ret.block_sparse = false",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose default block sparse (false).")'''
-
-[Function.choose_vec_block_sparse_true]
-params = {}
-ret = "VecBlockSparseChoice"
-condition = [
-    "ret.block_sparse = true",
-]
-info.hyperparameters = [
-]
-info.code = '''print("Choose block sparse (true).")'''
-
 [Function.choose_default_stream_shape]
-params.block = "BlockSparseChoice"
+params = {}
 ret = "StreamShapeChoice"
 condition = [
     "ret.stream_shape = 16",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_block: BlockSparseChoice,
-__hb_ret: StreamShapeChoice,
-
+info.code = '''ScheduleState.set_values(stream_shape=16)
 print("Choose default stream shape (16).")'''
 
 [Function.choose_stream_shape_1]
-params.block = "BlockSparseChoice"
+params = {}
 ret = "StreamShapeChoice"
 condition = [
     "ret.stream_shape = 1",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_block: BlockSparseChoice,
-__hb_ret: StreamShapeChoice,
-
+info.code = '''ScheduleState.set_values(stream_shape=1)
 print("Choose stream shape 1.")'''
 
 [Function.choose_stream_shape_2]
-params.block = "BlockSparseChoice"
+params = {}
 ret = "StreamShapeChoice"
 condition = [
     "ret.stream_shape = 2",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_block: BlockSparseChoice,
-__hb_ret: StreamShapeChoice,
-
+info.code = '''ScheduleState.set_values(stream_shape=2)
 print("Choose stream shape 2.")'''
 
 [Function.choose_stream_shape_4]
-params.block = "BlockSparseChoice"
+params = {}
 ret = "StreamShapeChoice"
 condition = [
     "ret.stream_shape = 4",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_block: BlockSparseChoice,
-__hb_ret: StreamShapeChoice,
-
+info.code = '''ScheduleState.set_values(stream_shape=4)
 print("Choose stream shape 4.")'''
 
 [Function.choose_stream_shape_8]
-params.block = "BlockSparseChoice"
+params = {}
 ret = "StreamShapeChoice"
 condition = [
     "ret.stream_shape = 8",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_block: BlockSparseChoice,
-__hb_ret: StreamShapeChoice,
-
+info.code = '''ScheduleState.set_values(stream_shape=8)
 print("Choose stream shape 8.")'''
 
 [Function.choose_stream_shape_16]
-params.block = "BlockSparseChoice"
+params = {}
 ret = "StreamShapeChoice"
 condition = [
     "ret.stream_shape = 16",
 ]
 info.hyperparameters = [
 ]
-info.code = '''__hb_block: BlockSparseChoice,
-__hb_ret: StreamShapeChoice,
-
+info.code = '''ScheduleState.set_values(stream_shape=16)
 print("Choose stream shape 16.")'''
 
 [Function.choose_default_block_sparse]
-params = {}
+params.shape = "StreamShapeChoice"
 ret = "BlockSparseChoice"
 condition = [
     "ret.block_sparse = false",
 ]
 info.hyperparameters = [
 ]
-info.code = '''print("Choose default block sparse (false).")'''
+info.code = '''ScheduleState.set_values(block_sparse=False)
+print("Choose default block sparse (false).")'''
 
 [Function.choose_block_sparse_true]
-params = {}
+params.shape = "StreamShapeChoice"
 ret = "BlockSparseChoice"
 condition = [
     "ret.block_sparse = true",
 ]
 info.hyperparameters = [
 ]
-info.code = '''print("Choose block sparse (true).")'''
-
-[Function.parallelization_only]
-params.level = "StreamLevelChoice"
-ret = "ParallelizationPass"
-condition = [
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_level: StreamLevelChoice,
-__hb_ret: ParallelizationPass,
-
-print("Parallelization only.")'''
-
-[Function.parallelization_and_vectorization]
-params.level = "VecStreamLevelChoice"
-ret = "ParallelizationPass"
-condition = [
-]
-info.hyperparameters = [
-]
-info.code = '''__hb_level: VecStreamLevelChoice,
-__hb_ret: ParallelizationPass,
-
-print("Parallelization and Vectorization.")'''
+info.code = '''ScheduleState.set_values(block_sparse=True)
+print("Choose block sparse (true).")'''
 
 [Function.vectorization]
-params.shape = "StreamShapeChoice"
+params.block = "BlockSparseChoice"
 ret = "VectorizationPass"
 condition = [
 ]
 info.hyperparameters = [
 ]
 info.code = '''print("Vectorization.")'''
+
+[Function.parallelization]
+params.par = "ParFactorChoice"
+ret = "ParallelizationPass"
+condition = [
+]
+info.hyperparameters = [
+]
+info.code = '''print("Parallelization.")'''
 
