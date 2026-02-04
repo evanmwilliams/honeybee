@@ -1,6 +1,7 @@
 import os
 import datetime
 import polars as pl
+import json
 
 from honey_lang import Helper, Input, Output, Function, __hb_bash
 
@@ -31,6 +32,58 @@ def carry_over(src_object, dst_object, *, file=None):
     else:
         carry_one(file)
 
+@Helper
+def write_schedule_json(schedule_dict, output_dir, *, filename="schedule.json"):
+    os.makedirs(output_dir, exist_ok=True)
+    out_path = os.path.join(output_dir, filename)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(schedule_dict, f, indent=2, sort_keys=True)
+    return out_path
+
+@Helper
+class ScheduleState:
+    stream_level = None
+    par_factor = None
+    stream_shape = None
+    block_sparse = None
+
+    @classmethod
+    def set_values(cls, *, stream_level=None, par_factor=None, stream_shape=None, block_sparse=None):
+        if stream_level is not None:
+            cls.stream_level = stream_level
+        if par_factor is not None:
+            cls.par_factor = par_factor
+        if stream_shape is not None:
+            cls.stream_shape = stream_shape
+        if block_sparse is not None:
+            cls.block_sparse = block_sparse
+
+    @classmethod
+    def as_dict(cls):
+        return {
+            "stream-parallelizer": {
+                "stream-level": cls.stream_level,
+                "par-factor": cls.par_factor,
+            },
+            "stream-vectorizer": {
+                "stream-shape": cls.stream_shape,
+                "enable-block-sparse": cls.block_sparse,
+            },
+        }
+
+    @classmethod
+    def missing_fields(cls):
+        missing = []
+        if cls.stream_level is None:
+            missing.append("stream_level")
+        if cls.par_factor is None:
+            missing.append("par_factor")
+        if cls.stream_shape is None:
+            missing.append("stream_shape")
+        if cls.block_sparse is None:
+            missing.append("block_sparse")
+        return missing
+
 ################################################################################
 # %% FuseFlow Schedule
 @Input 
@@ -49,50 +102,6 @@ class VectorizationPass:
     The goal of this step is to produce the schedule for the parallelization 
     pass in the FuseFlow compiler"""
     path: str
-
-
-@Output
-class VecStreamLevelChoice:
-    """VecStreamLevelChoice
-
-    The goal of this step is to choose a stream level for parallelization
-    when also selecting vectorization parameters."""
-    path: str
-
-    stream_level: int
-
-
-@Output
-class VecParFactorChoice:
-    """VecParFactorChoice
-
-    The goal of this step is to choose a parallelization factor when also
-    selecting vectorization parameters."""
-    path: str
-
-    par_factor: int
-
-
-@Output
-class VecStreamShapeChoice:
-    """VecStreamShapeChoice
-
-    The goal of this step is to choose a stream shape when also selecting
-    vectorization parameters."""
-    path: str
-
-    stream_shape: int
-
-
-@Output
-class VecBlockSparseChoice:
-    """VecBlockSparseChoice
-
-    The goal of this step is to choose whether block-sparse vectorization is
-    enabled when also selecting vectorization parameters."""
-    path: str
-
-    block_sparse: bool
 
 
 @Output
@@ -158,336 +167,168 @@ def default_schedule(__hb_ret: FuseFlowSchedule):
     """schedule 
 
     The function that produces a schedule."""
-    print("This is a default schedule.")
+    ScheduleState.set_values(
+        stream_level=0,
+        par_factor=1,
+        stream_shape=16,
+        block_sparse=False,
+    )
+    schedule = ScheduleState.as_dict()
+    write_schedule_json(schedule, __hb_ret.path)
+    print(json.dumps(schedule, indent=2, sort_keys=True))
 
 
 @Function(
 )
-def build_schedule(
-    __hb_pass: ParallelizationPass,
-    __hb_ret: FuseFlowSchedule,
-):
-    print("Build the schedule")
+def build_schedule(__hb_pass: ParallelizationPass, __hb_ret: FuseFlowSchedule):
+    missing = ScheduleState.missing_fields()
+    if missing:
+        raise RuntimeError(
+            "schedule state incomplete; missing: " + ", ".join(missing)
+        )
+    schedule = ScheduleState.as_dict()
+    write_schedule_json(schedule, __hb_ret.path)
+    print(json.dumps(schedule, indent=2, sort_keys=True))
 
 @Function(
     "ret.stream_level = 0",
 )
-def choose_default_stream_level(
-    __hb_par: ParFactorChoice,
-    __hb_ret: StreamLevelChoice,
-):
+def choose_default_stream_level(__hb_vec: VectorizationPass, __hb_ret: StreamLevelChoice):
+    ScheduleState.set_values(stream_level=0)
     print("Choose default stream level (0).")
 
 @Function(
     "ret.stream_level = 1",
 )
-def choose_stream_level_1(__hb_par: ParFactorChoice, __hb_ret: StreamLevelChoice):
+def choose_stream_level_1(__hb_vec: VectorizationPass, __hb_ret: StreamLevelChoice):
+    ScheduleState.set_values(stream_level=1)
     print("Choose stream level 1.")
 
 @Function(
     "ret.stream_level = 2",
 )
-def choose_stream_level_2(__hb_par: ParFactorChoice, __hb_ret: StreamLevelChoice):
+def choose_stream_level_2(__hb_vec: VectorizationPass, __hb_ret: StreamLevelChoice):
+    ScheduleState.set_values(stream_level=2)
     print("Choose stream level 2.")
 
 @Function(
     "ret.stream_level = 4",
 )
-def choose_stream_level_4(__hb_par: ParFactorChoice, __hb_ret: StreamLevelChoice):
+def choose_stream_level_4(__hb_vec: VectorizationPass, __hb_ret: StreamLevelChoice):
+    ScheduleState.set_values(stream_level=4)
     print("Choose stream level 4.")
 
 @Function(
     "ret.stream_level = 8",
 )
-def choose_stream_level_8(__hb_par: ParFactorChoice, __hb_ret: StreamLevelChoice):
+def choose_stream_level_8(__hb_vec: VectorizationPass, __hb_ret: StreamLevelChoice):
+    ScheduleState.set_values(stream_level=8)
     print("Choose stream level 8.")
 
 @Function(
     "ret.stream_level = 16",
 )
-def choose_stream_level_16(__hb_par: ParFactorChoice, __hb_ret: StreamLevelChoice):
+def choose_stream_level_16(__hb_vec: VectorizationPass, __hb_ret: StreamLevelChoice):
+    ScheduleState.set_values(stream_level=16)
     print("Choose stream level 16.")
 
 @Function(
     "ret.par_factor = 1",
 )
-def choose_default_par_factor(__hb_ret: ParFactorChoice):
+def choose_default_par_factor(__hb_level: StreamLevelChoice, __hb_ret: ParFactorChoice):
+    ScheduleState.set_values(par_factor=1)
     print("Choose default par factor (1).")
 
 @Function(
     "ret.par_factor = 2",
 )
-def choose_par_factor_2(__hb_ret: ParFactorChoice):
+def choose_par_factor_2(__hb_level: StreamLevelChoice, __hb_ret: ParFactorChoice):
+    ScheduleState.set_values(par_factor=2)
     print("Choose par factor 2.")
 
 @Function(
     "ret.par_factor = 4",
 )
-def choose_par_factor_4(__hb_ret: ParFactorChoice):
+def choose_par_factor_4(__hb_level: StreamLevelChoice, __hb_ret: ParFactorChoice):
+    ScheduleState.set_values(par_factor=4)
     print("Choose par factor 4.")
 
 @Function(
     "ret.par_factor = 8",
 )
-def choose_par_factor_8(__hb_ret: ParFactorChoice):
+def choose_par_factor_8(__hb_level: StreamLevelChoice, __hb_ret: ParFactorChoice):
+    ScheduleState.set_values(par_factor=8)
     print("Choose par factor 8.")
 
 @Function(
     "ret.par_factor = 16",
 )
-def choose_par_factor_16(__hb_ret: ParFactorChoice):
-    print("Choose par factor 16.")
-
-@Function(
-    "ret.stream_level = 0",
-)
-def choose_default_par_stream_level(
-    __hb_par: VecParFactorChoice,
-    __hb_ret: VecStreamLevelChoice,
-):
-    print("Choose default stream level (0).")
-
-@Function(
-    "ret.stream_level = 1",
-)
-def choose_par_stream_level_1(
-    __hb_par: VecParFactorChoice,
-    __hb_ret: VecStreamLevelChoice,
-):
-    print("Choose stream level 1.")
-
-@Function(
-    "ret.stream_level = 2",
-)
-def choose_par_stream_level_2(
-    __hb_par: VecParFactorChoice,
-    __hb_ret: VecStreamLevelChoice,
-):
-    print("Choose stream level 2.")
-
-@Function(
-    "ret.stream_level = 4",
-)
-def choose_par_stream_level_4(
-    __hb_par: VecParFactorChoice,
-    __hb_ret: VecStreamLevelChoice,
-):
-    print("Choose stream level 4.")
-
-@Function(
-    "ret.stream_level = 8",
-)
-def choose_par_stream_level_8(
-    __hb_par: VecParFactorChoice,
-    __hb_ret: VecStreamLevelChoice,
-):
-    print("Choose stream level 8.")
-
-@Function(
-    "ret.stream_level = 16",
-)
-def choose_par_stream_level_16(
-    __hb_par: VecParFactorChoice,
-    __hb_ret: VecStreamLevelChoice,
-):
-    print("Choose stream level 16.")
-
-@Function(
-    "ret.par_factor = 1",
-)
-def choose_default_par_factor_for_vec(
-    __hb_shape: VecStreamShapeChoice,
-    __hb_ret: VecParFactorChoice,
-):
-    print("Choose default par factor (1).")
-
-@Function(
-    "ret.par_factor = 2",
-)
-def choose_par_factor_for_vec_2(
-    __hb_shape: VecStreamShapeChoice,
-    __hb_ret: VecParFactorChoice,
-):
-    print("Choose par factor 2.")
-
-@Function(
-    "ret.par_factor = 4",
-)
-def choose_par_factor_for_vec_4(
-    __hb_shape: VecStreamShapeChoice,
-    __hb_ret: VecParFactorChoice,
-):
-    print("Choose par factor 4.")
-
-@Function(
-    "ret.par_factor = 8",
-)
-def choose_par_factor_for_vec_8(
-    __hb_shape: VecStreamShapeChoice,
-    __hb_ret: VecParFactorChoice,
-):
-    print("Choose par factor 8.")
-
-@Function(
-    "ret.par_factor = 16",
-)
-def choose_par_factor_for_vec_16(
-    __hb_shape: VecStreamShapeChoice,
-    __hb_ret: VecParFactorChoice,
-):
+def choose_par_factor_16(__hb_level: StreamLevelChoice, __hb_ret: ParFactorChoice):
+    ScheduleState.set_values(par_factor=16)
     print("Choose par factor 16.")
 
 @Function(
     "ret.stream_shape = 16",
 )
-def choose_default_vec_stream_shape(
-    __hb_block: VecBlockSparseChoice,
-    __hb_ret: VecStreamShapeChoice,
-):
+def choose_default_stream_shape(__hb_ret: StreamShapeChoice):
+    ScheduleState.set_values(stream_shape=16)
     print("Choose default stream shape (16).")
 
 @Function(
     "ret.stream_shape = 1",
 )
-def choose_vec_stream_shape_1(
-    __hb_block: VecBlockSparseChoice,
-    __hb_ret: VecStreamShapeChoice,
-):
+def choose_stream_shape_1(__hb_ret: StreamShapeChoice):
+    ScheduleState.set_values(stream_shape=1)
     print("Choose stream shape 1.")
 
 @Function(
     "ret.stream_shape = 2",
 )
-def choose_vec_stream_shape_2(
-    __hb_block: VecBlockSparseChoice,
-    __hb_ret: VecStreamShapeChoice,
-):
+def choose_stream_shape_2(__hb_ret: StreamShapeChoice):
+    ScheduleState.set_values(stream_shape=2)
     print("Choose stream shape 2.")
 
 @Function(
     "ret.stream_shape = 4",
 )
-def choose_vec_stream_shape_4(
-    __hb_block: VecBlockSparseChoice,
-    __hb_ret: VecStreamShapeChoice,
-):
+def choose_stream_shape_4(__hb_ret: StreamShapeChoice):
+    ScheduleState.set_values(stream_shape=4)
     print("Choose stream shape 4.")
 
 @Function(
     "ret.stream_shape = 8",
 )
-def choose_vec_stream_shape_8(
-    __hb_block: VecBlockSparseChoice,
-    __hb_ret: VecStreamShapeChoice,
-):
+def choose_stream_shape_8(__hb_ret: StreamShapeChoice):
+    ScheduleState.set_values(stream_shape=8)
     print("Choose stream shape 8.")
 
 @Function(
     "ret.stream_shape = 16",
 )
-def choose_vec_stream_shape_16(
-    __hb_block: VecBlockSparseChoice,
-    __hb_ret: VecStreamShapeChoice,
-):
+def choose_stream_shape_16(__hb_ret: StreamShapeChoice):
+    ScheduleState.set_values(stream_shape=16)
     print("Choose stream shape 16.")
 
 @Function(
     "ret.block_sparse = false",
 )
-def choose_default_vec_block_sparse(__hb_ret: VecBlockSparseChoice):
+def choose_default_block_sparse(__hb_shape: StreamShapeChoice, __hb_ret: BlockSparseChoice):
+    ScheduleState.set_values(block_sparse=False)
     print("Choose default block sparse (false).")
 
 @Function(
     "ret.block_sparse = true",
 )
-def choose_vec_block_sparse_true(__hb_ret: VecBlockSparseChoice):
-    print("Choose block sparse (true).")
-
-@Function(
-    "ret.stream_shape = 16",
-)
-def choose_default_stream_shape(
-    __hb_block: BlockSparseChoice,
-    __hb_ret: StreamShapeChoice,
-):
-    print("Choose default stream shape (16).")
-
-@Function(
-    "ret.stream_shape = 1",
-)
-def choose_stream_shape_1(
-    __hb_block: BlockSparseChoice,
-    __hb_ret: StreamShapeChoice,
-):
-    print("Choose stream shape 1.")
-
-@Function(
-    "ret.stream_shape = 2",
-)
-def choose_stream_shape_2(
-    __hb_block: BlockSparseChoice,
-    __hb_ret: StreamShapeChoice,
-):
-    print("Choose stream shape 2.")
-
-@Function(
-    "ret.stream_shape = 4",
-)
-def choose_stream_shape_4(
-    __hb_block: BlockSparseChoice,
-    __hb_ret: StreamShapeChoice,
-):
-    print("Choose stream shape 4.")
-
-@Function(
-    "ret.stream_shape = 8",
-)
-def choose_stream_shape_8(
-    __hb_block: BlockSparseChoice,
-    __hb_ret: StreamShapeChoice,
-):
-    print("Choose stream shape 8.")
-
-@Function(
-    "ret.stream_shape = 16",
-)
-def choose_stream_shape_16(
-    __hb_block: BlockSparseChoice,
-    __hb_ret: StreamShapeChoice,
-):
-    print("Choose stream shape 16.")
-
-@Function(
-    "ret.block_sparse = false",
-)
-def choose_default_block_sparse(__hb_ret: BlockSparseChoice):
-    print("Choose default block sparse (false).")
-
-@Function(
-    "ret.block_sparse = true",
-)
-def choose_block_sparse_true(__hb_ret: BlockSparseChoice):
+def choose_block_sparse_true(__hb_shape: StreamShapeChoice, __hb_ret: BlockSparseChoice):
+    ScheduleState.set_values(block_sparse=True)
     print("Choose block sparse (true).")
 
 @Function(
 )
-def parallelization_only(
-    __hb_level: StreamLevelChoice,
-    __hb_ret: ParallelizationPass,
-):
-    print("Parallelization only.")
-
-@Function(
-)
-def parallelization_and_vectorization(
-    __hb_level: VecStreamLevelChoice,
-    __hb_ret: ParallelizationPass,
-):
-    print("Parallelization and Vectorization.")
-
-
-@Function(
-
-)
-def vectorization(__hb_shape: StreamShapeChoice, __hb_ret: VectorizationPass):
+def vectorization(__hb_block: BlockSparseChoice, __hb_ret: VectorizationPass):
     print("Vectorization.")
+
+@Function(
+)
+def parallelization(__hb_par: ParFactorChoice, __hb_ret: ParallelizationPass):
+    print("Parallelization.")
